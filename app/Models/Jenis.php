@@ -13,7 +13,7 @@ class Jenis extends Model
 
     public function upz()
     {
-        return $this->hasMany(Upz::class, 'jenis');
+        return $this->hasMany(Upz::class, 'jenis_id');
     }
 }
 

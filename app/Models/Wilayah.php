@@ -9,7 +9,7 @@ class Wilayah extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['upz_id', 'nama', 'jenis', 'kode'];
+    protected $fillable = ['upz_id', 'nama', 'jenis', 'kode', 'alamat'];
 
     public function upz()
     {

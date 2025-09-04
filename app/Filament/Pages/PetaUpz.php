@@ -11,6 +11,7 @@ class PetaUpz extends Page
     use WithPagination;
 
     protected static ?string $navigationIcon = 'heroicon-o-map';
+    protected static ?string $activeNavigationIcon = 'heroicon-s-map';
     protected static string $view = 'filament.pages.peta-upz';
     protected static ?string $navigationLabel = 'Peta UPZ';
     protected static ?string $title = 'Peta Lokasi UPZ';
@@ -43,7 +44,7 @@ class PetaUpz extends Page
 
     public function loadData()
     {
-        $query = Upz::with(['koordinat', 'wilayah']);
+        $query = Upz::with(['koordinat', 'wilayah', 'jadwalPelayanan', 'kontak', 'foto']); // tambahkan foto
 
         if ($this->search) {
             $query->where('nama_upz', 'like', '%' . $this->search . '%');
@@ -59,11 +60,19 @@ class PetaUpz extends Page
             return [
                 'id' => $upz->id,
                 'nama' => $upz->nama_upz,
-                'alamat' => $upz->alamat ?? '-', // tambahkan alamat
+                'ketua' => $upz->nama_ketua ?? '-',
+                'alamat' => $upz->wilayah->first()->alamat ?? '-',
                 'kecamatan' => $upz->wilayah->first()->nama ?? '-',
                 'latitude' => $upz->koordinat->latitude ?? null,
-                'longitude' => $upz->koordinat->longitude ?? null, // fix nama kolom
+                'longitude' => $upz->koordinat->longitude ?? null,
+                'foto' => $upz->foto->first() ? asset('storage/' . $upz->foto->first()->url_foto) : null,
+                'jadwal' => $upz->jadwalPelayanan->pluck('hari')->toArray(),
+                'kontak' => $upz->kontak->map(fn($c) => [
+                    'jenis' => $c->jenis_kontak,
+                    'isi' => $c->isi_kontak,
+                ])->toArray(),
             ];
         })->toArray();
     }
+
 }

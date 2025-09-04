@@ -27,6 +27,16 @@ class User extends Authenticatable implements HasAvatar
         'password',
     ];
 
+    protected static function booted()
+    {
+        static::created(function ($user) {
+            // Pastikan role "User" sudah ada di database
+            if (!$user->hasRole('User')) {
+                $user->assignRole('User');
+            }
+        });
+    }
+
     /**
      * The attributes that should be hidden for serialization.
      *

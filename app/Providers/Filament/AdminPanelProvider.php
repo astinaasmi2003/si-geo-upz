@@ -32,7 +32,8 @@ class AdminPanelProvider extends PanelProvider
             ->id('admin')
             ->path('/')
             // ->spa()
-            ->brandLogo(asset('img/laravelchezzy.png'))
+            ->registration()
+            // ->brandLogo(asset('img/laravelchezzy.png'))
             ->brandLogoHeight('2rem')
             ->login(Login::class)
             ->profile(EditProfile::class)
@@ -40,7 +41,7 @@ class AdminPanelProvider extends PanelProvider
                 'danger' => Color::Rose,
                 'gray' => Color::Gray,
                 'info' => Color::Cyan,
-                'primary' => Color::Indigo,
+                'primary' => Color::Green,
                 'success' => Color::Emerald,
                 'warning' => Color::Orange,
             ])
@@ -61,7 +62,7 @@ class AdminPanelProvider extends PanelProvider
                     ->showEmptyPanelOnMobile(false)
                     ->formPanelPosition('right')
                     ->formPanelWidth('40%')
-                    ->emptyPanelBackgroundColor(Color::hex('#030712'))
+                    ->emptyPanelBackgroundColor(Color::hex('#002b05ff'))
                     ->emptyPanelBackgroundImageOpacity('60%')
                     ->emptyPanelBackgroundImageUrl(asset('img/auth/background-auth.png')),
                 LightSwitchPlugin::make(),

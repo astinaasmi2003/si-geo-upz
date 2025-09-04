@@ -9,14 +9,19 @@ use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+use Illuminate\Support\Facades\Auth;
 
 class UpzResource extends Resource
 {
     protected static ?string $model = Upz::class;
     protected static ?string $navigationIcon = 'heroicon-o-building-office';
+    protected static ?string $activeNavigationIcon = 'heroicon-s-building-office';
+    protected static ?string $navigationGroup = 'Manajemen UPZ';
     protected static ?string $navigationLabel = 'Data UPZ';
     protected static ?string $pluralModelLabel = 'UPZ';
     protected static ?string $modelLabel = 'UPZ';
@@ -25,70 +30,137 @@ class UpzResource extends Resource
     {
         return $form
             ->schema([
-                Forms\Components\TextInput::make('nama_upz')
-                    ->label('Nama UPZ')
-                    ->required()
-                    ->maxLength(45),
-                Forms\Components\TextInput::make('nama_ketua')
-                    ->label('Nama Ketua')
-                    ->required()
-                    ->maxLength(45),
-                Forms\Components\Select::make('jenis_id')
-                    ->label('Jenis UPZ')
-                    ->relationship('jenis', 'nama')
-                    ->preload()
-                    ->searchable()
-                    ->required(),
-                Forms\Components\DatePicker::make('tanggal_berlaku')
-                    ->label('Tanggal Berlaku')
-                    ->required(),
-                Forms\Components\Select::make('dibuat_oleh')
-                    ->label('Dibuat Oleh')
-                    ->relationship('user', 'name')
-                    ->preload()
-                    ->searchable()
-                    ->required(),
-            ]);
+                Forms\Components\Section::make('Informasi UPZ')
+                    ->description('Lengkapi data dasar tentang Unit Pengumpul Zakat.')
+                    ->icon('heroicon-o-information-circle')
+                    ->schema([
+                        Forms\Components\TextInput::make('nama_upz')
+                            ->label('Nama UPZ')
+                            ->required()
+                            ->maxLength(45)
+                            ->placeholder('Contoh: UPZ Masjid Al-Falah')
+                            ->columnSpanFull(),
+
+                        Forms\Components\TextInput::make('nama_ketua')
+                            ->label('Nama Ketua')
+                            ->required()
+                            ->maxLength(45)
+                            ->placeholder('Contoh: Ahmad Fauzi'),
+
+                        Forms\Components\Select::make('jenis_id')
+                            ->label('Jenis UPZ')
+                            ->relationship('jenis', 'nama')
+                            ->preload()
+                            ->searchable()
+                            ->required()
+                            ->placeholder('Pilih jenis UPZ')
+                            ->hint('Pilih jenis sesuai kategori resmi'),
+                    ])
+                    ->columns(2),
+
+                Forms\Components\Section::make('Detail Pengelolaan')
+                    ->icon('heroicon-o-calendar')
+                    ->schema([
+                        Forms\Components\DatePicker::make('tanggal_berlaku')
+                            ->label('Tanggal Berlaku')
+                            ->required()
+                            ->hint('Tanggal SK berlaku'),
+
+                        Forms\Components\Select::make('dibuat_oleh')
+                            ->label('Dibuat Oleh')
+                            ->relationship('user', 'name')
+                            ->preload()
+                            ->searchable()
+                            ->required()
+                            ->placeholder('Pilih pengguna'),
+                    ])
+                    ->columns(2),
+            ])
+            ->columns(1);
     }
 
     public static function table(Table $table): Table
     {
         return $table
+            ->modifyQueryUsing(function (Builder $query) {
+                $user = Auth::user();
+
+                // Kalau bukan admin, filter hanya data milik user
+                if (!$user->hasRole('Administrator')) {
+                    $query->where('dibuat_oleh', $user->id);
+                }
+            })
             ->columns([
-                Tables\Columns\TextColumn::make('nama_upz')
+                TextColumn::make('nama_upz')
                     ->label('Nama UPZ')
-                    ->searchable(),
-                Tables\Columns\TextColumn::make('nama_ketua')
-                    ->label('Ketua'),
-                Tables\Columns\TextColumn::make('jenis.nama')
-                    ->label('Jenis'),
-                Tables\Columns\TextColumn::make('tanggal_berlaku')
-                    ->label('Berlaku'),
-                Tables\Columns\TextColumn::make('dibuat_oleh')
-                    ->numeric()
+                    ->searchable()
+                    ->sortable()
+                    ->icon('heroicon-o-building-office')
+                    ->wrap()
+                    ->weight('bold'),
+
+                TextColumn::make('nama_ketua')
+                    ->label('Ketua')
+                    ->icon('heroicon-o-user-circle')
+                    ->color('gray')
+                    ->wrap(),
+
+                TextColumn::make('jenis.nama')
+                    ->label('Jenis')
+                    ->badge()
+                    ->colors([
+                        'success' => fn($state) => in_array($state, ['Masjid', 'Mushola']),
+                        'info' => fn($state) => $state === 'Lembaga',
+                        'warning' => fn($state) => $state === 'Sekolah',
+                        'primary',
+                    ])
+                    ->icon('heroicon-o-tag')
                     ->sortable(),
-                Tables\Columns\TextColumn::make('created_at')
-                    ->dateTime()
+
+                TextColumn::make('tanggal_berlaku')
+                    ->label('Berlaku')
+                    ->date()
                     ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                Tables\Columns\TextColumn::make('updated_at')
-                    ->dateTime()
-                    ->sortable()
+                    ->icon('heroicon-o-calendar'),
+
+                TextColumn::make('user.name')
+                    ->label('Dibuat Oleh')
+                    ->icon('heroicon-o-user')
+                    ->color('gray')
+                    ->searchable(),
+
+                TextColumn::make('created_at')
+                    ->dateTime('d M Y')
+                    ->label('Dibuat')
+                    ->icon('heroicon-o-clock')
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
-                Tables\Filters\SelectFilter::make('jenis')
+                SelectFilter::make('jenis')
                     ->relationship('jenis', 'nama')
-                    ->label('Filter Jenis'),
+                    ->label('Filter Jenis')
+                    ->searchable(),
             ])
+            ->defaultSort('created_at', 'desc')
+            ->striped()
             ->actions([
-                Tables\Actions\EditAction::make(),
+                Tables\Actions\ViewAction::make()
+                    ->label('Lihat Detail')
+                    ->icon('heroicon-o-eye'),
+
+                Tables\Actions\EditAction::make()
+                    ->icon('heroicon-o-pencil-square'),
+
+                Tables\Actions\DeleteAction::make()
+                    ->icon('heroicon-o-trash'),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
                     Tables\Actions\DeleteBulkAction::make(),
                 ]),
-            ]);
+            ])
+            ->emptyStateHeading('Belum ada data UPZ')
+            ->emptyStateDescription('Tambahkan data UPZ dengan mengklik tombol "Buat UPZ" di atas.');
     }
 
     public static function getRelations(): array
